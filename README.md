@@ -1,5 +1,5 @@
 # JoystickOverTCP-IP
-A Client/Server application for transmitting joystick controlls over any network
+A Client/Server application for transmitting joystick controlls over any network.
 Add net play to any 2 player game or console emulator when used inconjunction with video stream / screenshare.
 
 # Notes
