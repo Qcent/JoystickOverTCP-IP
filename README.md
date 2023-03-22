@@ -1,11 +1,11 @@
 # JoystickOverTCP-IP
 A Client/Server application for transmitting joystick controlls over any network.
-Add net play to any 2 player game or console emulator when used inconjunction with video stream / screenshare.
+Add net play to any two-player game or console emulator when used in conjunction with video stream / screenshare.
 
 # Notes
 This application requires that the host/server computer have [vJoy](https://github.com/shauleiz/vJoy) installed.
  
-This application communicates on port 5000 (can be changed easily in source code), if computers are behind a firewall and/or router this port most likely will need to be opened and forworded.
+This application communicates on port 5000 (can be changed easily in source code), if computers are behind a firewall and/or router this port most likely will need to be opened and forwarded.
  
 Compiled executables in /dist folder are win64
 
@@ -18,13 +18,13 @@ The application is currently configured to reproduce the buttons, axes and d-hat
 # How to use joyServer
 If running from script you will require the python libraries: pyvjoy, socket, ast, urllib.request.
 
-Once run, you will see a message indicating that you are awaiting a connection and your outward facing IP addresses. The Client will need to enter your address into their application. When the Client successfully establishes a connection you will see an onscreen notification.
+Once run, a message will indicate that you are awaiting a connection and the program will display your local and outward facing IP addresses. The Client will need to enter your address into their application. When the Client successfully establishes a connection you will see an onscreen notification.
 
 ![joyServer Output](images/serverSide.png)
 
 # How to use joyClient
-If running from script you will require the python libraries: pygame, socket, ipaddress, time
+If running from script you will require the python libraries: pygame, socket, ipaddress, time.
 
-This app uses your primary game controller by default, change with windows settings or run from script to select your input device. Once run you will be required to enter the address of the host/server. If you then receive a "Connected!" message you should be good to go.
+This app uses your primary game controller by default. Change with windows settings or run from script to select your input device. Once run you will be required to enter the address of the host/server. If you then receive a "Connected!" message you should be good to go.
 
 ![joyClient Output](images/clientSide.png)
