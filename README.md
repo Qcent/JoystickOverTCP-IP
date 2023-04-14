@@ -11,7 +11,7 @@ Compiled executables in /dist folder are win64
 
 # Seting up vJoy
 To run this application the Host/Server must install [vJoy](https://github.com/shauleiz/vJoy) to emulate a native game controller. It will use the first vJoy device slot without altering the python script.
-The application is currently configured to reproduce the buttons, axes and d-hat of an XBox controller (PlayStation DualShock via DS4Windows). vJoy must be configured to support 6 axes, 11 buttons and 1 four direction POV hat switch (as shown below).
+The application is currently configured to reproduce the buttons, axes and d-hat of an XBox controller (PlayStation DualShock via [DS4Windows](https://ds4-windows.com/)). vJoy must be configured to support 6 axes, 11 buttons and 1 four direction POV hat switch (as shown below).
 
 ![Example vJoy Configuration](images/vJoyConfig.png)
 
@@ -20,7 +20,7 @@ If running from script you will require the python libraries: pyvjoy, socket, as
 
 Once run, a message will indicate that you are awaiting a connection and the program will display your local and outward facing IP addresses. The Client will need to enter your address into their application. When the Client successfully establishes a connection you will see an onscreen notification.
 
-With command line arguments you can specify which port(-p) to listen on and if you want to display latency(-l) info.
+With command line arguments you can specify which port to listen on and if you want to display latency info. \
 eg.
 ```
  joyServer1.1 -p 6800    # runs joyServer on port 6800
