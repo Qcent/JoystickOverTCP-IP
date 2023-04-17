@@ -1,9 +1,17 @@
+import vgamepad as vg
+import vgamepad.win.vigem_commons as vcom
 import socket
-import ast
-import pyvjoy
 import urllib.request
 import time
+import ctypes
 import argparse
+
+
+def convert_byte_array_to_ds4_report_ex(byte_array):
+    ds4_report_ex = vcom.DS4_REPORT_EX()
+    ctypes.memmove(ctypes.addressof(ds4_report_ex), byte_array, ctypes.sizeof(ds4_report_ex))
+    return ds4_report_ex
+
 
 # Create an argument parser
 parser = argparse.ArgumentParser(description='Receive joystick data from a computer over tcp/ip')
@@ -33,8 +41,8 @@ server_address = (HOST, PORT)
 server_socket.bind(server_address)
 server_socket.listen(1)
 
-# initialize vJoy joystick
-joystick = pyvjoy.VJoyDevice(1)
+# initialize vgamepad emulating a DS4 controller
+gamepad = vg.VDS4Gamepad()
 
 
 def awaitConnection():
@@ -66,34 +74,10 @@ def awaitConnection():
         if not data:
             break
 
-        # parse joystick input
-        data = ast.literal_eval(data.decode())
-        axes = data['axes']
-        buttons = data['buttons']
-        hats = data['hats']
-
-        # update vJoy joystick
-        joystick.set_axis(pyvjoy.HID_USAGE_X, int(axes[0] * 16384 + 16384))
-        joystick.set_axis(pyvjoy.HID_USAGE_Y, int(axes[1] * 16384 + 16384))
-        joystick.set_axis(pyvjoy.HID_USAGE_RX, int(axes[2] * 16384 + 16384))
-        joystick.set_axis(pyvjoy.HID_USAGE_RY, int(axes[3] * 16384 + 16384))
-        joystick.set_axis(pyvjoy.HID_USAGE_Z, int(axes[4] * 16384 + 16384))
-        joystick.set_axis(pyvjoy.HID_USAGE_RZ, int(axes[5] * 16384 + 16384))
-
-        for i, button_state in enumerate(buttons):
-            joystick.set_button(i+1, button_state)
-
-        hat_value = hats[0]
-        if hat_value == (0, 1):
-            joystick.set_disc_pov(1, 0)
-        elif hat_value == (0, -1):
-            joystick.set_disc_pov(1, 2)
-        elif hat_value == (-1, 0):
-            joystick.set_disc_pov(1, 3)
-        elif hat_value == (1, 0):
-            joystick.set_disc_pov(1, 1)
-        else:
-            joystick.set_disc_pov(1, -1)
+        # update gamepad
+        gamepad.update_extended_report(
+            convert_byte_array_to_ds4_report_ex(data)
+        )
 
         # send response back to client
         try:
@@ -107,8 +91,9 @@ def awaitConnection():
     client_socket.close()
     print("\tDisconnected")
 
-    # reset vJoy joystick
-    joystick.reset()
+    # reset gamepad to default state
+    gamepad.reset()
+    gamepad.update()
 
 
 while True:
