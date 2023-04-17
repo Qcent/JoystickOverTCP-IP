@@ -41,9 +41,6 @@ server_address = (HOST, PORT)
 server_socket.bind(server_address)
 server_socket.listen(1)
 
-# initialize vgamepad emulating a DS4 controller
-gamepad = vg.VDS4Gamepad()
-
 
 def awaitConnection():
     print(f'Waiting for Connection on port: {PORT}\n\t\t LAN: {lan_ip}\n\t\t WAN: {external_ip}')
@@ -57,6 +54,9 @@ def awaitConnection():
     client_socket.sendall(response.encode())
     loop_count = 0
     print(f'Client Timing: {client_timing}fps established')
+
+    # initialize vgamepad emulating a DS4 controller
+    gamepad = vg.VDS4Gamepad()
 
     # receive joystick input from client
     while True:
