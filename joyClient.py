@@ -173,4 +173,3 @@ while True:
     if FAILEDCONNECTIONS > 3:
         args.host = ''
         FAILEDCONNECTIONS = 0
-
