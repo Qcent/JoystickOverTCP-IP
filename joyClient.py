@@ -1,8 +1,9 @@
-import pygame
+import hid
 import socket
 import ipaddress
 import time
 import argparse
+from helper_functions import is_gamepad
 
 # Create an argument parser
 parser = argparse.ArgumentParser(description='Send joystick data to a computer over tcp/ip')
@@ -13,7 +14,8 @@ parser.add_argument('-p', '--port', type=str, help='Port that the host/server is
 parser.add_argument('-f', '--fps', type=str,
                     help='How many times the client will attempt to communicate with server per second')
 parser.add_argument('-l', '--latency', action='store_true', help='Show latency output')
-parser.add_argument('-s', '--select', action='store_true', help='Show select joystick screen')
+parser.add_argument('-s', '--select', action='store_true', help='Show select input menu')
+parser.add_argument('-a', '--auto', type=str, help='set to 0 to disable')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -30,34 +32,44 @@ if args.port:
 else:
     TARGET_FPS = 50
 
-# initialize pygame
-pygame.init()
-clock = pygame.time.Clock()
+# set auto
+if args.auto:
+    args.auto = int(args.auto)
+else:
+    args.auto = 1
 
-# initialize the joystick module
-pygame.joystick.init()
+class FPSlimiter:
+    def __init__(self, target_fps):
+        self.target_fps = target_fps
+        self.target_frame_time = 1.0 / target_fps
+        self.last_frame_time = time.monotonic()
 
-# get the number of joysticks connected
-joystick_count = pygame.joystick.get_count()
+    def tick(self):
+        current_time = time.monotonic()
+        elapsed_time = current_time - self.last_frame_time
+        sleep_time = self.target_frame_time - elapsed_time
 
+        if sleep_time > 0:
+            time.sleep(sleep_time)
 
-def default_joystick():
-    # get the first joystick
-    return pygame.joystick.Joystick(0)
+        self.last_frame_time = current_time
 
+def select_device(devices, auto_select=0):
+    if len(devices) == 1 or auto_select == 1:
+        device_index = 0
+    else:
+        # Prompt the user to select an HID device from a list of devices provided
+        print('Select a Gamepad:')
+        for i, device in enumerate(devices):
+            print(f'{i}: {device["manufacturer_string"]} {device["product_string"]}',
+                  f' ({device["vendor_id"]:x}, {device["product_id"]:x})' if args.select else '')
+        device_index = int(input('Enter device index: '))
+    device_info = devices[device_index]
+    device = hid.device()
+    device.open(device_info['vendor_id'], device_info['product_id'])
+    print(f"Using joystick '{device_info['product_string']}'")
 
-def select_joystick():
-    # if there are any joystick devices connected
-    if joystick_count > 0:
-        # allow user to select a joystick device
-        print("Select a joystick device:")
-        for i in range(joystick_count):
-            joystick = pygame.joystick.Joystick(i)
-            joystick.init()
-            print(f"{i}: {joystick.get_name()}")
-
-        joystick_index = int(input("Enter joystick index: "))
-        return pygame.joystick.Joystick(joystick_index)
+    return device
 
 
 def get_host_address():
@@ -90,31 +102,23 @@ def establish_connection(ip_address):
         print("<< Connection Failed >>")
         return False
 
-    print("Connected!")
+    print("Connected! \u263A")
     loop_count = 0
 
     # send joystick input to server
     while True:
-        # handle events
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                client_socket.close()
-                pygame.quit()
-                quit()
 
-        # get joystick input and store in data
-        data = {'axes': [joystick.get_axis(i) for i in range(joystick.get_numaxes())],
-                'buttons': [joystick.get_button(i) for i in range(joystick.get_numbuttons())],
-                'hats': [joystick.get_hat(i) for i in range(joystick.get_numhats())]}
+        # Read the next HID report (up to 64 bytes)
+        report = device.read(64)
 
         # let's calculate some latency
         if args.latency and loop_count == 19:
             start_time = time.time()
 
         # send joystick input to server
-        message = str(data)
         try:
-            client_socket.sendall(message.encode())
+            # Shift bytearray because first byte is not needed
+            client_socket.sendall(bytes(report[1:]))
         except Exception:
             print("<< Connection Lost >>")
             return False
@@ -133,29 +137,40 @@ def establish_connection(ip_address):
             print("<< Connection Lost >>")
             return False
 
-        # set clock to limit FPS
-        clock.tick(TARGET_FPS)
+        # run clock to limit FPS
+        clock.tick()
 
 
-# LOOP STARTS HERE
+# ENTRY POINT STARTS HERE
 
+clock = FPSlimiter(TARGET_FPS)
 FAILEDCONNECTIONS = 0
 end_time = 0
 start_time = 0
 
+# Examine HID's  and search for known gamepads
+devices = hid.enumerate()
+gamepads = [device for device in devices if is_gamepad(device)]
+
+
 # check if any joysticks are connected
+joystick_count = len(gamepads)
+
 if joystick_count > 0:
     if args.select:
-        joystick = select_joystick()
+        device = select_device(devices)
     else:
-        joystick = default_joystick()
-    joystick.init()
-    print(f"Using joystick '{joystick.get_name()}'")
-    while True:
-        establish_connection(get_host_address())
-        FAILEDCONNECTIONS += 1
-        if FAILEDCONNECTIONS > 3:
-            args.host = ''
-            FAILEDCONNECTIONS = 0
+        device = select_device(gamepads,args.auto)
 else:
-    print("No joysticks detected.")
+    print("No gamepads detected.  \u2639")
+    device = select_device(devices)
+
+# main loop keeps client running
+# asks for new host if connection fails 3 times
+while True:
+    establish_connection(get_host_address())
+    FAILEDCONNECTIONS += 1
+    if FAILEDCONNECTIONS > 3:
+        args.host = ''
+        FAILEDCONNECTIONS = 0
+
